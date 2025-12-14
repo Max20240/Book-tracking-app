@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reading Tracker Pro - Suivi de Lecture</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="min-h-screen transition-colors duration-300">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+            <div class="text-center md:text-left mb-4 md:mb-0">
+                <h1 class="text-3xl md:text-4xl font-bold text-amber-900 dark:text-amber-400 mb-1">
+                    <i class="fas fa-book-open text-amber-600 mr-3"></i><span data-i18n="appTitle">Reading Tracker Pro</span>
+                </h1>
+                <p class="text-amber-700 dark:text-amber-300" data-i18n="appSubtitle">Build your reading habit, one page at a time</p>
+            </div>
+            <div class="flex items-center justify-center gap-4">
+                <!-- Language Toggle -->
+                <div class="flex bg-white dark:bg-gray-700 rounded-lg shadow-lg overflow-hidden">
+                    <button onclick="setLanguage('en')" data-lang="en" class="lang-btn px-3 py-2 text-sm font-medium transition-all active">EN</button>
+                    <button onclick="setLanguage('fr')" data-lang="fr" class="lang-btn px-3 py-2 text-sm font-medium transition-all">FR</button>
+                </div>
+                <button onclick="toggleDarkMode()" class="p-3 rounded-full bg-white dark:bg-gray-700 shadow-lg hover:scale-110 transition-all">
+                    <i class="fas fa-moon text-gray-600 dark:hidden"></i>
+                    <i class="fas fa-sun text-yellow-400 hidden dark:inline"></i>
+                </button>
+                <button onclick="showExportImportModal()" class="p-3 rounded-full bg-white dark:bg-gray-700 shadow-lg hover:scale-110 transition-all">
+                    <i class="fas fa-cloud text-blue-500"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="flex justify-center mb-8 bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-2 overflow-x-auto">
+            <button onclick="showTab('dashboard')" id="tab-dashboard" class="flex-1 md:flex-none px-6 py-3 font-semibold text-gray-600 dark:text-gray-300 hover:text-amber-500 transition-all tab-active rounded-xl">
+                <i class="fas fa-chart-pie mr-2"></i><span class="hidden md:inline" data-i18n="navDashboard">Dashboard</span>
+            </button>
+            <button onclick="showTab('library')" id="tab-library" class="flex-1 md:flex-none px-6 py-3 font-semibold text-gray-600 dark:text-gray-300 hover:text-amber-500 transition-all rounded-xl">
+                <i class="fas fa-book mr-2"></i><span class="hidden md:inline" data-i18n="navLibrary">Library</span>
+            </button>
+            <button onclick="showTab('timer')" id="tab-timer" class="flex-1 md:flex-none px-6 py-3 font-semibold text-gray-600 dark:text-gray-300 hover:text-amber-500 transition-all rounded-xl">
+                <i class="fas fa-stopwatch mr-2"></i><span class="hidden md:inline" data-i18n="navTimer">Timer</span>
+            </button>
+            <button onclick="showTab('achievements')" id="tab-achievements" class="flex-1 md:flex-none px-6 py-3 font-semibold text-gray-600 dark:text-gray-300 hover:text-amber-500 transition-all rounded-xl">
+                <i class="fas fa-trophy mr-2"></i><span class="hidden md:inline" data-i18n="navAchievements">Achievements</span>
+            </button>
+            <button onclick="showTab('insights')" id="tab-insights" class="flex-1 md:flex-none px-6 py-3 font-semibold text-gray-600 dark:text-gray-300 hover:text-amber-500 transition-all rounded-xl">
+                <i class="fas fa-lightbulb mr-2"></i><span class="hidden md:inline" data-i18n="navInsights">Insights</span>
+            </button>
+            <button onclick="showTab('retrospective')" id="tab-retrospective" class="flex-1 md:flex-none px-6 py-3 font-semibold text-gray-600 dark:text-gray-300 hover:text-amber-500 transition-all rounded-xl">
+                <i class="fas fa-calendar-check mr-2"></i><span class="hidden md:inline" data-i18n="navRetrospective">Retrospective</span>
+            </button>
+        </nav>
+
+        <!-- Dashboard Tab -->
+        <div id="content-dashboard" class="tab-content">
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+                <div class="card rounded-2xl shadow-lg p-5 text-center fade-in">
+                    <div class="text-3xl font-bold text-blue-600" id="todayPages">0</div>
+                    <div class="text-gray-500 text-sm" data-i18n="todayPages">Today's Pages</div>
+                </div>
+                <div class="card rounded-2xl shadow-lg p-5 text-center fade-in">
+                    <div class="text-3xl font-bold text-cyan-600" id="todayMinutes">0</div>
+                    <div class="text-gray-500 text-sm" data-i18n="todayMinutes">Today's Minutes</div>
+                </div>
+                <div class="card rounded-2xl shadow-lg p-5 text-center fade-in">
+                    <div class="text-3xl font-bold text-green-600" id="monthPages">0</div>
+                    <div class="text-gray-500 text-sm" data-i18n="thisMonth">This Month</div>
+                </div>
+                <div class="card rounded-2xl shadow-lg p-5 text-center fade-in">
+                    <div class="text-3xl font-bold text-purple-600 flex items-center justify-center gap-2">
+                        <span id="currentStreak">0</span>
+                        <i class="fas fa-fire text-orange-500 streak-fire" id="streakIcon" style="display: none;"></i>
+                    </div>
+                    <div class="text-gray-500 text-sm" data-i18n="dayStreak">Day Streak</div>
+                </div>
+                <div class="card rounded-2xl shadow-lg p-5 text-center fade-in col-span-2 md:col-span-1">
+                    <div class="text-3xl font-bold text-amber-600" id="yearPages">0</div>
+                    <div class="text-gray-500 text-sm" data-i18n="thisYear">This Year</div>
+                </div>
+            </div>
+
+            <!-- Main Content Grid -->
+            <div class="grid md:grid-cols-3 gap-6">
+                <!-- Log Reading Section -->
+                <div class="md:col-span-1">
+                    <div class="card rounded-2xl shadow-lg p-6 mb-6">
+                        <h2 class="text-xl font-bold text-gray-800 mb-4">
+                            <i class="fas fa-plus-circle text-amber-500 mr-2"></i><span data-i18n="logReading">Log Reading</span>
+                        </h2>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-gray-600 text-sm mb-2" data-i18n="date">Date</label>
+                                <input type="date" id="readingDate" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block text-gray-600 text-sm mb-2" data-i18n="pagesRead">Pages Read</label>
+                                <input type="number" id="pagesRead" min="1" data-i18n-placeholder="enterPages" placeholder="Enter pages" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block text-gray-600 text-sm mb-2" data-i18n="minutesRead">Minutes Read (optional)</label>
+                                <input type="number" id="minutesRead" min="1" data-i18n-placeholder="enterMinutes" placeholder="Enter minutes" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block text-gray-600 text-sm mb-2" data-i18n="book">Book</label>
+                                <select id="bookSelect" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                    <option value="">Select a book...</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-gray-600 text-sm mb-2" data-i18n="notes">Notes (optional)</label>
+                                <textarea id="readingNotes" rows="2" data-i18n-placeholder="notesPlaceholder" placeholder="Any thoughts about your reading?" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"></textarea>
+                            </div>
+                            <button onclick="logReading()" class="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold py-3 rounded-lg hover:from-amber-600 hover:to-orange-600 transition-all transform hover:scale-105 shadow-lg">
+                                <i class="fas fa-check mr-2"></i><span data-i18n="logSession">Log Reading Session</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Daily Goal -->
+                    <div class="card rounded-2xl shadow-lg p-6">
+                        <h2 class="text-xl font-bold text-gray-800 mb-4">
+                            <i class="fas fa-bullseye text-red-500 mr-2"></i><span data-i18n="goals">Goals</span>
+                        </h2>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-gray-600 text-sm mb-2" data-i18n="dailyPageGoal">Daily Page Goal</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" id="dailyGoal" min="1" value="30" class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                    <span class="text-gray-500 text-sm" data-i18n="pages">pages</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-gray-600 text-sm mb-2" data-i18n="dailyTimeGoal">Daily Time Goal</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" id="dailyTimeGoal" min="1" value="30" class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                    <span class="text-gray-500 text-sm" data-i18n="mins">mins</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-gray-600 text-sm mb-2" data-i18n="yearlyPageGoal">Yearly Page Goal</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" id="yearlyGoal" min="1" value="10000" class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                    <span class="text-gray-500 text-sm" data-i18n="pages">pages</span>
+                                </div>
+                            </div>
+                            <button onclick="saveGoals()" class="w-full bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-white font-semibold py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-500 transition-all" data-i18n="saveGoals">
+                                Save Goals
+                            </button>
+                        </div>
+                        
+                        <!-- Progress Bars -->
+                        <div class="mt-6 space-y-4">
+                            <div>
+                                <div class="flex justify-between text-sm text-gray-600 mb-1">
+                                    <span data-i18n="todaysPagesProgress">Today's Pages</span>
+                                    <span id="goalProgress">0%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3">
+                                    <div id="goalProgressBar" class="bg-gradient-to-r from-green-400 to-green-600 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-sm text-gray-600 mb-1">
+                                    <span data-i18n="todaysTimeProgress">Today's Time</span>
+                                    <span id="timeGoalProgress">0%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3">
+                                    <div id="timeGoalProgressBar" class="bg-gradient-to-r from-cyan-400 to-cyan-600 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-sm text-gray-600 mb-1">
+                                    <span data-i18n="yearlyProgress">Yearly Progress</span>
+                                    <span id="yearlyProgress">0%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3">
+                                    <div id="yearlyProgressBar" class="bg-gradient-to-r from-purple-400 to-purple-600 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Calendar & Chart -->
+                <div class="md:col-span-2">
+                    <!-- Weekly Chart -->
+                    <div class="card rounded-2xl shadow-lg p-6 mb-6">
+                        <h2 class="text-xl font-bold text-gray-800 mb-4">
+                            <i class="fas fa-chart-bar text-indigo-500 mr-2"></i><span data-i18n="weeklyOverview">Weekly Overview</span>
+                        </h2>
+                        <div class="h-48">
+                            <canvas id="weeklyChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Month Navigation -->
+                    <div class="card rounded-2xl shadow-lg p-6 mb-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <button onclick="changeMonth(-1)" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-all">
+                                <i class="fas fa-chevron-left text-gray-600 dark:text-gray-300"></i>
+                            </button>
+                            <h2 class="text-xl font-bold text-gray-800" id="currentMonth">January 2024</h2>
+                            <button onclick="changeMonth(1)" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-all">
+                                <i class="fas fa-chevron-right text-gray-600 dark:text-gray-300"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Calendar Grid -->
+                        <div class="grid grid-cols-7 gap-1 mb-2">
+                            <div class="weekday-header text-center text-xs font-semibold text-gray-500 py-2">Sun</div>
+                            <div class="weekday-header text-center text-xs font-semibold text-gray-500 py-2">Mon</div>
+                            <div class="weekday-header text-center text-xs font-semibold text-gray-500 py-2">Tue</div>
+                            <div class="weekday-header text-center text-xs font-semibold text-gray-500 py-2">Wed</div>
+                            <div class="weekday-header text-center text-xs font-semibold text-gray-500 py-2">Thu</div>
+                            <div class="weekday-header text-center text-xs font-semibold text-gray-500 py-2">Fri</div>
+                            <div class="weekday-header text-center text-xs font-semibold text-gray-500 py-2">Sat</div>
+                        </div>
+                        <div class="grid grid-cols-7 gap-1" id="calendarGrid"></div>
+                        
+                        <!-- Legend -->
+                        <div class="flex items-center justify-center gap-4 mt-4 text-xs text-gray-500">
+                            <span data-i18n="less">Less</span>
+                            <div class="flex gap-1">
+                                <div class="w-4 h-4 rounded reading-level-0"></div>
+                                <div class="w-4 h-4 rounded reading-level-1"></div>
+                                <div class="w-4 h-4 rounded reading-level-2"></div>
+                                <div class="w-4 h-4 rounded reading-level-3"></div>
+                                <div class="w-4 h-4 rounded reading-level-4"></div>
+                            </div>
+                            <span data-i18n="more">More</span>
+                        </div>
+                    </div>
+
+                    <!-- Monthly Retrospective -->
+                    <div class="card rounded-2xl shadow-lg p-6">
+                        <h2 class="text-xl font-bold text-gray-800 mb-4">
+                            <i class="fas fa-chart-line text-blue-500 mr-2"></i><span data-i18n="monthlyRetrospective">Monthly Retrospective</span>
+                        </h2>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                            <div class="bg-blue-50 dark:bg-blue-900/30 rounded-xl p-4 text-center">
+                                <div class="text-2xl font-bold text-blue-600" id="retroTotal">0</div>
+                                <div class="text-xs text-blue-500" data-i18n="totalPages">Total Pages</div>
+                            </div>
+                            <div class="bg-green-50 dark:bg-green-900/30 rounded-xl p-4 text-center">
+                                <div class="text-2xl font-bold text-green-600" id="retroDays">0</div>
+                                <div class="text-xs text-green-500" data-i18n="daysRead">Days Read</div>
+                            </div>
+                            <div class="bg-purple-50 dark:bg-purple-900/30 rounded-xl p-4 text-center">
+                                <div class="text-2xl font-bold text-purple-600" id="retroBest">0</div>
+                                <div class="text-xs text-purple-500" data-i18n="bestDay">Best Day</div>
+                            </div>
+                            <div class="bg-cyan-50 dark:bg-cyan-900/30 rounded-xl p-4 text-center">
+                                <div class="text-2xl font-bold text-cyan-600" id="retroMinutes">0</div>
+                                <div class="text-xs text-cyan-500" data-i18n="totalMinutes">Total Minutes</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Books Read This Month -->
+                        <div>
+                            <h3 class="font-semibold text-gray-700 mb-3">
+                                <i class="fas fa-bookmark text-amber-500 mr-2"></i><span data-i18n="booksThisMonth">Books This Month</span>
+                            </h3>
+                            <div id="booksThisMonth" class="space-y-2 max-h-40 overflow-y-auto">
+                                <p class="text-gray-400 text-sm italic" data-i18n="noBooksLogged">No books logged yet</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="mt-6 card rounded-2xl shadow-lg p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-history text-green-500 mr-2"></i><span data-i18n="recentActivity">Recent Activity</span>
+                </h2>
+                <div id="recentActivity" class="space-y-3 max-h-60 overflow-y-auto">
+                    <p class="text-gray-400 text-sm italic" data-i18n="noReadingLogged">No reading logged yet. Start your journey!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Library Tab -->
+        <div id="content-library" class="tab-content hidden">
+            <div class="grid md:grid-cols-3 gap-6">
+                <!-- Add Book Form -->
+                <div class="md:col-span-1">
+                    <!-- Search Books Online -->
+                    <div class="card rounded-2xl shadow-lg p-6 mb-6">
+                        <h2 class="text-xl font-bold text-gray-800 mb-4">
+                            <i class="fas fa-search text-blue-500 mr-2"></i><span data-i18n="searchBooks">Search Books Online</span>
+                        </h2>
+                        <div class="space-y-4">
+                            <div class="flex gap-2">
+                                <input type="text" id="bookSearchQuery" data-i18n-placeholder="searchPlaceholder" placeholder="Search by title or author..." class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" onkeypress="if(event.key==='Enter')searchBooksOnline()">
+                                <button id="searchBtn" onclick="searchBooksOnline()" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all">
+                                    <i class="fas fa-search mr-2"></i><span data-i18n="search">Search</span>
+                                </button>
+                            </div>
+                            <div id="searchResults" class="search-results"></div>
+                        </div>
+                    </div>
+
+                    <div class="card rounded-2xl shadow-lg p-6">
+                        <h2 class="text-xl font-bold text-gray-800 mb-4">
+                            <i class="fas fa-plus text-green-500 mr-2"></i><span data-i18n="addNewBook">Add New Book</span>
+                        </h2>
+                        <div class="space-y-4">
+                            <!-- Basic Info -->
+                            <div>
+                                <label class="block text-gray-600 text-sm mb-2"><span data-i18n="bookTitle">Book Title</span> *</label>
+                                <input type="text" id="newBookTitle" data-i18n-placeholder="enterBookTitle" placeholder="Enter book title" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block text-gray-600 text-sm mb-2" data-i18n="author">Author</label>
+                                <input type="text" id="newBookAuthor" data-i18n-placeholder="enterAuthor" placeholder="Enter author name" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-gray-600 text-sm mb-2"><span data-i18n="totalPagesBook">Total Pages</span> *</label>
+                                    <input type="number" id="newBookPages" min="1" placeholder="Pages" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-600 text-sm mb-2" data-i18n="isbn">ISBN</label>
+                                    <input type="text" id="newBookISBN" placeholder="ISBN" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-gray-600 text-sm mb-2" data-i18n="genre">Genre</label>
+                                    <select id="newBookGenre" class="genre-select w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                        <option value="Fiction">Fiction</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-gray-600 text-sm mb-2" data-i18n="status">Status</label>
+                                    <select id="newBookStatus" class="status-select w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                        <option value="reading">Currently Reading</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- Additional Info (collapsible) -->
+                            <details class="border border-gray-200 dark:border-gray-600 rounded-lg">
+                                <summary class="px-4 py-2 cursor-pointer text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg">
+                                    <i class="fas fa-plus-circle mr-2"></i>More details (optional)
+                                </summary>
+                                <div class="p-4 space-y-4 border-t border-gray-200 dark:border-gray-600">
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-gray-600 text-sm mb-2" data-i18n="publisher">Publisher</label>
+                                            <input type="text" id="newBookPublisher" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                        </div>
+                                        <div>
+                                            <label class="block text-gray-600 text-sm mb-2" data-i18n="publishYear">Publication Year</label>
+                                            <input type="text" id="newBookYear" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-gray-600 text-sm mb-2" data-i18n="language">Language</label>
+                                            <select id="newBookLanguage" class="language-select w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                                <option value="English">English</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-gray-600 text-sm mb-2" data-i18n="format">Format</label>
+                                            <select id="newBookFormat" class="format-select w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                                <option value="Paperback">Paperback</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-gray-600 text-sm mb-2" data-i18n="series">Series</label>
+                                            <input type="text" id="newBookSeries" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                        </div>
+                                        <div>
+                                            <label class="block text-gray-600 text-sm mb-2" data-i18n="seriesNumber">Series #</label>
+                                            <input type="text" id="newBookSeriesNum" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-gray-600 text-sm mb-2" data-i18n="startDate">Start Date</label>
+                                        <input type="date" id="newBookStartDate" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                    </div>
+                                    <div>
+                                        <label class="block text-gray-600 text-sm mb-2">Cover URL</label>
+                                        <input type="url" id="newBookCover" placeholder="https://..." class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                    </div>
+                                    <div>
+                                        <label class="block text-gray-600 text-sm mb-2" data-i18n="description">Description</label>
+                                        <textarea id="newBookDescription" rows="2" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"></textarea>
+                                    </div>
+                                    <div>
+                                        <label class="block text-gray-600 text-sm mb-2" data-i18n="personalNotes">Personal Notes</label>
+                                        <textarea id="newBookNotes" rows="2" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"></textarea>
+                                    </div>
+                                    <div>
+                                        <label class="block text-gray-600 text-sm mb-2" data-i18n="rating">Rating</label>
+                                        <input type="hidden" id="newBookRating" value="0">
+                                        <div id="starRating" class="flex gap-1">
+                                            <i class="fas fa-star cursor-pointer text-2xl text-gray-300" onclick="setRating(1)"></i>
+                                            <i class="fas fa-star cursor-pointer text-2xl text-gray-300" onclick="setRating(2)"></i>
+                                            <i class="fas fa-star cursor-pointer text-2xl text-gray-300" onclick="setRating(3)"></i>
+                                            <i class="fas fa-star cursor-pointer text-2xl text-gray-300" onclick="setRating(4)"></i>
+                                            <i class="fas fa-star cursor-pointer text-2xl text-gray-300" onclick="setRating(5)"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </details>
+                            
+                            <button onclick="addBook()" class="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-semibold py-3 rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all transform hover:scale-105">
+                                <i class="fas fa-plus mr-2"></i><span data-i18n="addBook">Add Book</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Library Stats -->
+                    <div class="card rounded-2xl shadow-lg p-6 mt-6">
+                        <h2 class="text-xl font-bold text-gray-800 mb-4">
+                            <i class="fas fa-chart-pie text-purple-500 mr-2"></i><span data-i18n="libraryStats">Library Stats</span>
+                        </h2>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                                <span class="text-gray-600 dark:text-gray-300" data-i18n="currentlyReading">Currently Reading</span>
+                                <span class="font-bold text-blue-600" id="statReading">0</span>
+                            </div>
+                            <div class="flex justify-between items-center p-3 bg-amber-50 dark:bg-amber-900/30 rounded-lg">
+                                <span class="text-gray-600 dark:text-gray-300" data-i18n="toRead">To Read</span>
+                                <span class="font-bold text-amber-600" id="statToRead">0</span>
+                            </div>
+                            <div class="flex justify-between items-center p-3 bg-green-50 dark:bg-green-900/30 rounded-lg">
+                                <span class="text-gray-600 dark:text-gray-300" data-i18n="completed">Completed</span>
+                                <span class="font-bold text-green-600" id="statCompleted">0</span>
+                            </div>
+                            <div class="flex justify-between items-center p-3 bg-purple-50 dark:bg-purple-900/30 rounded-lg">
+                                <span class="text-gray-600 dark:text-gray-300">Total</span>
+                                <span class="font-bold text-purple-600" id="statTotal">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Book List -->
+                <div class="md:col-span-2">
+                    <div class="card rounded-2xl shadow-lg p-6">
+                        <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+                            <h2 class="text-xl font-bold text-gray-800 mb-4 md:mb-0">
+                                <i class="fas fa-books text-amber-500 mr-2"></i><span data-i18n="myLibrary">My Library</span>
+                            </h2>
+                            <div class="flex gap-2 flex-wrap">
+                                <button onclick="filterBooks('all')" class="px-4 py-2 text-sm rounded-lg bg-gray-100 dark:bg-gray-600 hover:bg-amber-100 dark:hover:bg-amber-900 transition-all filter-btn bg-amber-200 dark:bg-amber-900" data-filter="all" data-i18n="all">All</button>
+                                <button onclick="filterBooks('reading')" class="px-4 py-2 text-sm rounded-lg bg-gray-100 dark:bg-gray-600 hover:bg-blue-100 dark:hover:bg-blue-900 transition-all filter-btn" data-filter="reading" data-i18n="reading">Reading</button>
+                                <button onclick="filterBooks('to-read')" class="px-4 py-2 text-sm rounded-lg bg-gray-100 dark:bg-gray-600 hover:bg-amber-100 dark:hover:bg-amber-900 transition-all filter-btn" data-filter="to-read" data-i18n="toRead">To Read</button>
+                                <button onclick="filterBooks('completed')" class="px-4 py-2 text-sm rounded-lg bg-gray-100 dark:bg-gray-600 hover:bg-green-100 dark:hover:bg-green-900 transition-all filter-btn" data-filter="completed" data-i18n="completed">Completed</button>
+                            </div>
+                        </div>
+                        <div id="bookList" class="space-y-4 max-h-[600px] overflow-y-auto">
+                            <p class="text-gray-400 text-center py-8" data-i18n="noBooksInLibrary">No books in your library yet. Add your first book!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timer Tab -->
+        <div id="content-timer" class="tab-content hidden">
+            <div class="max-w-2xl mx-auto">
+                <div class="card rounded-2xl shadow-lg p-8 text-center">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-2">
+                        <i class="fas fa-stopwatch text-amber-500 mr-2"></i><span data-i18n="readingTimer">Reading Timer</span>
+                    </h2>
+                    <p class="text-gray-500 mb-8" data-i18n="timerDescription">Track your reading sessions in real-time</p>
+                    
+                    <div class="timer-display text-7xl md:text-8xl font-bold text-amber-600 mb-8" id="timerDisplay">
+                        00:00:00
+                    </div>
+                    
+                    <div class="flex justify-center gap-4 mb-8">
+                        <button onclick="startTimer()" id="startBtn" class="px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-semibold rounded-xl hover:from-green-600 hover:to-emerald-600 transition-all transform hover:scale-105 shadow-lg">
+                            <i class="fas fa-play mr-2"></i><span data-i18n="start">Start</span>
+                        </button>
+                        <button onclick="pauseTimer()" id="pauseBtn" class="px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-600 transition-all transform hover:scale-105 shadow-lg hidden">
+                            <i class="fas fa-pause mr-2"></i><span data-i18n="pause">Pause</span>
+                        </button>
+                        <button onclick="resetTimer()" class="px-8 py-4 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-white font-semibold rounded-xl hover:bg-gray-300 dark:hover:bg-gray-500 transition-all">
+                            <i class="fas fa-redo mr-2"></i><span data-i18n="reset">Reset</span>
+                        </button>
+                    </div>
+                    
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-6">
+                        <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-4" data-i18n="logThisSession">Log This Session</h3>
+                        <div class="grid md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-gray-600 dark:text-gray-300 text-sm mb-2" data-i18n="pagesRead">Pages Read</label>
+                                <input type="number" id="timerPages" min="1" data-i18n-placeholder="enterPages" placeholder="Pages read" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-500 dark:bg-gray-600 dark:border-gray-500 dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block text-gray-600 dark:text-gray-300 text-sm mb-2" data-i18n="book">Book</label>
+                                <select id="timerBook" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-500 dark:bg-gray-600 dark:border-gray-500 dark:text-white">
+                                    <option value="">Select a book...</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button onclick="logTimerSession()" class="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold py-3 rounded-lg hover:from-amber-600 hover:to-orange-600 transition-all">
+                            <i class="fas fa-check mr-2"></i><span data-i18n="logSession">Log Session</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Today's Sessions -->
+                <div class="card rounded-2xl shadow-lg p-6 mt-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-clock text-blue-500 mr-2"></i><span data-i18n="todaysSessions">Today's Reading Sessions</span>
+                    </h2>
+                    <div id="todaySessions" class="space-y-3">
+                        <p class="text-gray-400 text-center py-4" data-i18n="noSessionsToday">No sessions today yet</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Achievements Tab -->
+        <div id="content-achievements" class="tab-content hidden">
+            <div class="card rounded-2xl shadow-lg p-6 mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-2 text-center">
+                    <i class="fas fa-trophy text-yellow-500 mr-2"></i><span data-i18n="achievements">Achievements</span>
+                </h2>
+                <p class="text-gray-500 text-center mb-6" data-i18n="achievementsDesc">Unlock achievements as you build your reading habit!</p>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-6" id="achievementsGrid">
+                    <!-- Achievements will be inserted here -->
+                </div>
+            </div>
+            
+            <!-- Achievement Progress -->
+            <div class="card rounded-2xl shadow-lg p-6">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-chart-line text-purple-500 mr-2"></i><span data-i18n="progress">Progress</span>
+                </h3>
+                <div class="flex items-center gap-4">
+                    <div class="flex-1">
+                        <div class="flex justify-between text-sm text-gray-600 mb-1">
+                            <span data-i18n="achievementsUnlocked">Achievements Unlocked</span>
+                            <span id="achievementProgress">0 / 0</span>
+                        </div>
+                        <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-4">
+                            <div id="achievementProgressBar" class="bg-gradient-to-r from-yellow-400 to-yellow-600 h-4 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Insights Tab -->
+        <div id="content-insights" class="tab-content hidden">
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- Reading Patterns -->
+                <div class="card rounded-2xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-calendar-week text-indigo-500 mr-2"></i><span data-i18n="readingByDayOfWeek">Reading by Day of Week</span>
+                    </h2>
+                    <div class="h-64">
+                        <canvas id="dayOfWeekChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Monthly Trends -->
+                <div class="card rounded-2xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-chart-area text-green-500 mr-2"></i><span data-i18n="monthlyTrends">Monthly Trends</span>
+                    </h2>
+                    <div class="h-64">
+                        <canvas id="monthlyTrendChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Reading Stats -->
+                <div class="card rounded-2xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-star text-amber-500 mr-2"></i><span data-i18n="allTimeStats">All-Time Stats</span>
+                    </h2>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 rounded-xl p-4 text-center">
+                            <div class="text-3xl font-bold text-blue-600" id="allTimePages">0</div>
+                            <div class="text-sm text-blue-500" data-i18n="totalPages">Total Pages</div>
+                        </div>
+                        <div class="bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-900/30 dark:to-cyan-800/30 rounded-xl p-4 text-center">
+                            <div class="text-3xl font-bold text-cyan-600" id="allTimeMinutes">0</div>
+                            <div class="text-sm text-cyan-500" data-i18n="totalMinutes">Total Minutes</div>
+                        </div>
+                        <div class="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 rounded-xl p-4 text-center">
+                            <div class="text-3xl font-bold text-green-600" id="allTimeDays">0</div>
+                            <div class="text-sm text-green-500" data-i18n="daysRead">Days Read</div>
+                        </div>
+                        <div class="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/30 rounded-xl p-4 text-center">
+                            <div class="text-3xl font-bold text-purple-600" id="longestStreak">0</div>
+                            <div class="text-sm text-purple-500" data-i18n="longestStreak">Longest Streak</div>
+                        </div>
+                        <div class="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/30 dark:to-amber-800/30 rounded-xl p-4 text-center">
+                            <div class="text-3xl font-bold text-amber-600" id="allTimeBooks">0</div>
+                            <div class="text-sm text-amber-500" data-i18n="booksRead">Books Read</div>
+                        </div>
+                        <div class="bg-gradient-to-br from-rose-50 to-rose-100 dark:from-rose-900/30 dark:to-rose-800/30 rounded-xl p-4 text-center">
+                            <div class="text-3xl font-bold text-rose-600" id="bestDay">0</div>
+                            <div class="text-sm text-rose-500" data-i18n="bestDayPages">Best Day (pages)</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Best Reading Days -->
+                <div class="card rounded-2xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-medal text-yellow-500 mr-2"></i><span data-i18n="topReadingDays">Top Reading Days</span>
+                    </h2>
+                    <div id="topReadingDays" class="space-y-3">
+                        <p class="text-gray-400 text-center py-4" data-i18n="startReadingToSee">Start reading to see your best days!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Retrospective Tab -->
+        <div id="content-retrospective" class="tab-content hidden">
+            <!-- Month/Year Toggle -->
+            <div class="flex justify-center mb-6">
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-1 inline-flex">
+                    <button onclick="setRetroView('month')" id="retro-month-btn" class="px-6 py-2 rounded-lg font-semibold transition-all bg-amber-500 text-white">
+                        <i class="fas fa-calendar-alt mr-2"></i><span data-i18n="monthly">Monthly</span>
+                    </button>
+                    <button onclick="setRetroView('year')" id="retro-year-btn" class="px-6 py-2 rounded-lg font-semibold transition-all text-gray-600 dark:text-gray-300">
+                        <i class="fas fa-calendar mr-2"></i><span data-i18n="yearly">Yearly</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Period Navigation -->
+            <div class="flex items-center justify-center gap-4 mb-6">
+                <button onclick="changeRetroPeriod(-1)" class="p-3 bg-white dark:bg-gray-700 rounded-full shadow-lg hover:scale-110 transition-all">
+                    <i class="fas fa-chevron-left text-gray-600 dark:text-gray-300"></i>
+                </button>
+                <h2 class="text-2xl font-bold text-gray-800 dark:text-white min-w-[200px] text-center" id="retroPeriodTitle">January 2024</h2>
+                <button onclick="changeRetroPeriod(1)" class="p-3 bg-white dark:bg-gray-700 rounded-full shadow-lg hover:scale-110 transition-all">
+                    <i class="fas fa-chevron-right text-gray-600 dark:text-gray-300"></i>
+                </button>
+            </div>
+
+            <!-- Summary Cards -->
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+                <div class="card rounded-2xl shadow-lg p-5 text-center">
+                    <div class="text-3xl font-bold text-blue-600" id="retroSummaryPages">0</div>
+                    <div class="text-gray-500 text-sm" data-i18n="totalPages">Total Pages</div>
+                    <div class="text-xs mt-1" id="retroPagesChange"></div>
+                </div>
+                <div class="card rounded-2xl shadow-lg p-5 text-center">
+                    <div class="text-3xl font-bold text-cyan-600" id="retroSummaryMinutes">0</div>
+                    <div class="text-gray-500 text-sm" data-i18n="totalMinutes">Total Minutes</div>
+                    <div class="text-xs mt-1" id="retroMinutesChange"></div>
+                </div>
+                <div class="card rounded-2xl shadow-lg p-5 text-center">
+                    <div class="text-3xl font-bold text-green-600" id="retroSummaryDays">0</div>
+                    <div class="text-gray-500 text-sm" data-i18n="daysRead">Days Read</div>
+                    <div class="text-xs mt-1" id="retroDaysChange"></div>
+                </div>
+                <div class="card rounded-2xl shadow-lg p-5 text-center">
+                    <div class="text-3xl font-bold text-purple-600" id="retroSummaryAvg">0</div>
+                    <div class="text-gray-500 text-sm" data-i18n="avgPagesDay">Avg Pages/Day</div>
+                    <div class="text-xs mt-1" id="retroAvgChange"></div>
+                </div>
+                <div class="card rounded-2xl shadow-lg p-5 text-center">
+                    <div class="text-3xl font-bold text-amber-600" id="retroSummaryBooks">0</div>
+                    <div class="text-gray-500 text-sm" data-i18n="booksCompleted">Books Completed</div>
+                    <div class="text-xs mt-1" id="retroBooksChange"></div>
+                </div>
+                <div class="card rounded-2xl shadow-lg p-5 text-center">
+                    <div class="text-3xl font-bold text-rose-600" id="retroSummaryBest">0</div>
+                    <div class="text-gray-500 text-sm" data-i18n="bestDay">Best Day</div>
+                    <div class="text-xs mt-1 text-gray-400" id="retroBestDate"></div>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-6 mb-6">
+                <!-- Goal Achievement -->
+                <div class="card rounded-2xl shadow-lg p-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-bullseye text-red-500 mr-2"></i><span data-i18n="goalAchievement">Goal Achievement</span>
+                    </h3>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between text-sm text-gray-600 mb-1">
+                                <span data-i18n="daysGoalMet">Days Goal Met</span>
+                                <span id="retroGoalDays">0 / 0</span>
+                            </div>
+                            <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-4">
+                                <div id="retroGoalDaysBar" class="bg-gradient-to-r from-green-400 to-green-600 h-4 rounded-full transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-3 mt-4">
+                            <div class="bg-green-50 dark:bg-green-900/30 rounded-xl p-3 text-center">
+                                <div class="text-2xl font-bold text-green-600" id="retroGoalExceeded">0</div>
+                                <div class="text-xs text-green-500" data-i18n="exceeded">Exceeded</div>
+                            </div>
+                            <div class="bg-blue-50 dark:bg-blue-900/30 rounded-xl p-3 text-center">
+                                <div class="text-2xl font-bold text-blue-600" id="retroGoalMet">0</div>
+                                <div class="text-xs text-blue-500" data-i18n="met">Met</div>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-600 rounded-xl p-3 text-center">
+                                <div class="text-2xl font-bold text-gray-600 dark:text-gray-300" id="retroGoalMissed">0</div>
+                                <div class="text-xs text-gray-500" data-i18n="missed">Missed</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reading Consistency -->
+                <div class="card rounded-2xl shadow-lg p-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-chart-line text-indigo-500 mr-2"></i><span data-i18n="readingConsistency">Reading Consistency</span>
+                    </h3>
+                    <div class="h-40">
+                        <canvas id="retroConsistencyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-6 mb-6">
+                <!-- Streaks Analysis -->
+                <div class="card rounded-2xl shadow-lg p-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-fire text-orange-500 mr-2"></i><span data-i18n="streaks">Streaks</span>
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-900/30 rounded-lg">
+                            <span class="text-gray-600 dark:text-gray-300" data-i18n="longestStreak">Longest Streak</span>
+                            <span class="font-bold text-orange-600" id="retroLongestStreak">0 days</span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-900/30 rounded-lg">
+                            <span class="text-gray-600 dark:text-gray-300" data-i18n="currentStreak">Current Streak</span>
+                            <span class="font-bold text-amber-600" id="retroCurrentStreak">0 days</span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/30 rounded-lg">
+                            <span class="text-gray-600 dark:text-gray-300" data-i18n="streakCount">Streak Count</span>
+                            <span class="font-bold text-yellow-600" id="retroStreakCount">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reading Time Distribution -->
+                <div class="card rounded-2xl shadow-lg p-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-clock text-cyan-500 mr-2"></i><span data-i18n="timeDistribution">Time Distribution</span>
+                    </h3>
+                    <div class="h-40">
+                        <canvas id="retroTimeChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Best Days Ranking -->
+                <div class="card rounded-2xl shadow-lg p-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-medal text-yellow-500 mr-2"></i><span data-i18n="top5Days">Top 5 Days</span>
+                    </h3>
+                    <div id="retroTopDays" class="space-y-2 max-h-40 overflow-y-auto">
+                        <p class="text-gray-400 text-sm italic" data-i18n="noDataPeriod">No data for this period</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-6 mb-6">
+                <!-- Books Completed -->
+                <div class="card rounded-2xl shadow-lg p-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-book-open text-green-500 mr-2"></i><span data-i18n="booksCompleted">Books Completed</span>
+                    </h3>
+                    <div id="retroBooksCompleted" class="space-y-3 max-h-60 overflow-y-auto">
+                        <p class="text-gray-400 text-sm italic" data-i18n="noBooksCompleted">No books completed in this period</p>
+                    </div>
+                </div>
+
+                <!-- Genre Distribution -->
+                <div class="card rounded-2xl shadow-lg p-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-tags text-purple-500 mr-2"></i><span data-i18n="genreDistribution">Genre Distribution</span>
+                    </h3>
+                    <div class="h-48">
+                        <canvas id="retroGenreChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Personal Insights & Recommendations -->
+            <div class="card rounded-2xl shadow-lg p-6 mb-6">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-lightbulb text-amber-500 mr-2"></i><span data-i18n="personalInsights">Personal Insights & Recommendations</span>
+                </h3>
+                <div id="retroInsights" class="grid md:grid-cols-2 gap-4">
+                    <p class="text-gray-400 text-sm italic" data-i18n="startLoggingInsights">Start logging your reading to get personalized insights!</p>
+                </div>
+            </div>
+
+            <!-- Month-over-Month Comparison -->
+            <div id="retroComparisonSection" class="card rounded-2xl shadow-lg p-6 mb-6">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-balance-scale text-blue-500 mr-2"></i><span data-i18n="comparisonPrevious">Comparison with Previous Period</span>
+                </h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="text-center p-4 rounded-xl bg-gray-50 dark:bg-gray-700">
+                        <div class="text-sm text-gray-500 mb-1" data-i18n="pages">Pages</div>
+                        <div class="text-2xl font-bold" id="retroComparePages">-</div>
+                    </div>
+                    <div class="text-center p-4 rounded-xl bg-gray-50 dark:bg-gray-700">
+                        <div class="text-sm text-gray-500 mb-1" data-i18n="mins">Minutes</div>
+                        <div class="text-2xl font-bold" id="retroCompareMinutes">-</div>
+                    </div>
+                    <div class="text-center p-4 rounded-xl bg-gray-50 dark:bg-gray-700">
+                        <div class="text-sm text-gray-500 mb-1" data-i18n="daysRead">Days Read</div>
+                        <div class="text-2xl font-bold" id="retroCompareDays">-</div>
+                    </div>
+                    <div class="text-center p-4 rounded-xl bg-gray-50 dark:bg-gray-700">
+                        <div class="text-sm text-gray-500 mb-1">Books</div>
+                        <div class="text-2xl font-bold" id="retroCompareBooks">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reading Notes/Highlights -->
+            <div class="card rounded-2xl shadow-lg p-6">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-sticky-note text-pink-500 mr-2"></i><span data-i18n="readingNotes">Reading Notes</span>
+                </h3>
+                <div id="retroNotes" class="space-y-3 max-h-60 overflow-y-auto">
+                    <p class="text-gray-400 text-sm italic" data-i18n="noNotesPeriod">No notes for this period</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Motivational Quote -->
+        <div class="mt-8 text-center">
+            <p class="text-amber-800 dark:text-amber-400 italic text-lg" id="motivationalQuote">"A reader lives a thousand lives before he dies."</p>
+            <p class="text-amber-600 dark:text-amber-500 text-sm mt-1" id="quoteAuthor">— George R.R. Martin</p>
+        </div>
+    </div>
+
+    <!-- Export/Import Modal -->
+    <div id="exportImportModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 modal">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 m-4 max-w-md w-full">
+            <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-4">
+                <i class="fas fa-cloud text-blue-500 mr-2"></i><span data-i18n="backupRestore">Backup & Restore</span>
+            </h2>
+            <div class="space-y-4">
+                <button onclick="exportData()" class="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold py-3 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all">
+                    <i class="fas fa-download mr-2"></i><span data-i18n="exportData">Export Data</span>
+                </button>
+                <div>
+                    <label class="block text-gray-600 dark:text-gray-300 text-sm mb-2" data-i18n="importData">Import Data</label>
+                    <input type="file" id="importFile" accept=".json" class="w-full border border-gray-300 rounded-lg px-4 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                </div>
+                <button onclick="importData()" class="w-full bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold py-3 rounded-lg hover:from-green-600 hover:to-green-700 transition-all">
+                    <i class="fas fa-upload mr-2"></i><span data-i18n="importData">Import Data</span>
+                </button>
+                <button onclick="closeExportImportModal()" class="w-full bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-white font-semibold py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-all" data-i18n="close">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/translations.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/retrospective.js"></script>
+</body>
+</html>
