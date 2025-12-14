@@ -34,24 +34,38 @@ function getAchievements() {
 }
 
 // Initialize
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('readingDate').valueAsDate = new Date();
-    document.getElementById('dailyGoal').value = goals.daily;
-    document.getElementById('dailyTimeGoal').value = goals.dailyTime;
-    document.getElementById('yearlyGoal').value = goals.yearly;
-    
+
     // Check for dark mode preference
     if (localStorage.getItem('darkMode') === 'true') {
         document.documentElement.classList.add('dark');
     }
-    
+
     // Set language buttons
     updateLanguageButtons();
     updateAllTranslations();
-    updateAll();
-    updateBookSelects();
-    updateLibraryStats();
-    initCharts();
+
+    // Initialize auth
+    const isAuthenticated = await AuthService.init();
+
+    if (isAuthenticated) {
+        document.getElementById('userMenuBtn').classList.remove('hidden');
+        await DatabaseService.loadAllData();
+
+        document.getElementById('dailyGoal').value = goals.daily;
+        document.getElementById('dailyTimeGoal').value = goals.dailyTime;
+        document.getElementById('yearlyGoal').value = goals.yearly;
+
+        updateAll();
+        updateBookSelects();
+        updateLibraryStats();
+        initCharts();
+    } else {
+        showAuthModal();
+    }
+
+    updateAuthModal();
 });
 
 // Update all translations
@@ -189,7 +203,7 @@ function toggleDarkMode() {
 }
 
 // Log reading
-function logReading() {
+async function logReading() {
     const date = document.getElementById('readingDate').value;
     const pages = parseInt(document.getElementById('pagesRead').value);
     const minutes = parseInt(document.getElementById('minutesRead').value) || 0;
@@ -201,55 +215,72 @@ function logReading() {
         return;
     }
 
-    if (!readingData[date]) {
-        readingData[date] = { pages: 0, minutes: 0, sessions: [] };
-    }
-    
-    readingData[date].pages += pages;
-    readingData[date].minutes = (readingData[date].minutes || 0) + minutes;
-    readingData[date].sessions.push({
-        pages,
-        minutes,
-        bookId,
-        notes,
-        timestamp: new Date().toISOString()
-    });
+    try {
+        await DatabaseService.logReadingSession({ date, pages, minutes, bookId, notes });
 
-    // Update book progress
-    if (bookId) {
-        const book = books.find(b => b.id === bookId);
-        if (book) {
-            book.pagesRead = (book.pagesRead || 0) + pages;
-            if (book.pagesRead >= book.totalPages) {
-                book.status = 'completed';
-                book.completedDate = date;
-                book.endDate = date;
-                showToast(t('congratsFinished', { title: book.title }), 'success');
-            }
-            saveBooks();
+        if (!readingData[date]) {
+            readingData[date] = { pages: 0, minutes: 0, sessions: [] };
         }
-    }
 
-    saveData();
-    updateAll();
-    
-    // Clear inputs
-    document.getElementById('pagesRead').value = '';
-    document.getElementById('minutesRead').value = '';
-    document.getElementById('readingNotes').value = '';
-    
-    showToast(t(minutes ? 'loggedPagesMinutes' : 'loggedPages', { pages, minutes }), 'success');
-    checkNewAchievements();
+        readingData[date].pages += pages;
+        readingData[date].minutes = (readingData[date].minutes || 0) + minutes;
+        readingData[date].sessions.push({
+            pages,
+            minutes,
+            bookId,
+            notes,
+            timestamp: new Date().toISOString()
+        });
+
+        if (bookId) {
+            const book = books.find(b => b.id === bookId);
+            if (book) {
+                book.pagesRead = (book.pagesRead || 0) + pages;
+                if (book.pagesRead >= book.totalPages) {
+                    book.status = 'completed';
+                    book.completedDate = date;
+                    await DatabaseService.updateBook(bookId, {
+                        pagesRead: book.pagesRead,
+                        status: 'completed',
+                        completedDate: date
+                    });
+                    showToast(t('congratsFinished', { title: book.title }), 'success');
+                } else {
+                    await DatabaseService.updateBook(bookId, {
+                        pagesRead: book.pagesRead
+                    });
+                }
+            }
+        }
+
+        updateAll();
+
+        document.getElementById('pagesRead').value = '';
+        document.getElementById('minutesRead').value = '';
+        document.getElementById('readingNotes').value = '';
+
+        showToast(t(minutes ? 'loggedPagesMinutes' : 'loggedPages', { pages, minutes }), 'success');
+        checkNewAchievements();
+    } catch (error) {
+        console.error('Error logging reading:', error);
+        showToast('Error logging reading session', 'error');
+    }
 }
 
 // Save goals
-function saveGoals() {
+async function saveGoals() {
     goals.daily = parseInt(document.getElementById('dailyGoal').value) || 30;
     goals.dailyTime = parseInt(document.getElementById('dailyTimeGoal').value) || 30;
     goals.yearly = parseInt(document.getElementById('yearlyGoal').value) || 10000;
-    localStorage.setItem('goals', JSON.stringify(goals));
-    updateAll();
-    showToast(t('goalsSaved'), 'success');
+
+    try {
+        await DatabaseService.saveGoals(goals);
+        updateAll();
+        showToast(t('goalsSaved'), 'success');
+    } catch (error) {
+        console.error('Error saving goals:', error);
+        showToast('Error saving goals', 'error');
+    }
 }
 
 // Save data
@@ -500,12 +531,17 @@ function updateRecentActivity() {
     }).join('');
 }
 
-function deleteEntry(date) {
+async function deleteEntry(date) {
     if (confirm(t('deleteEntry'))) {
-        delete readingData[date];
-        saveData();
-        updateAll();
-        showToast(t('entryDeleted'), 'info');
+        try {
+            await DatabaseService.deleteReadingEntry(date);
+            delete readingData[date];
+            updateAll();
+            showToast(t('entryDeleted'), 'info');
+        } catch (error) {
+            console.error('Error deleting entry:', error);
+            showToast('Error deleting entry', 'error');
+        }
     }
 }
 
@@ -616,7 +652,7 @@ function updateCharts() {
 }
 
 // Book management
-function addBook() {
+async function addBook() {
     const title = document.getElementById('newBookTitle').value.trim();
     const author = document.getElementById('newBookAuthor').value.trim();
     const totalPages = parseInt(document.getElementById('newBookPages').value);
@@ -640,52 +676,60 @@ function addBook() {
         return;
     }
 
-    const book = {
-        id: Date.now().toString(),
-        title,
-        author,
-        totalPages,
-        pagesRead: 0,
-        genre,
-        status,
-        isbn,
-        publisher,
-        publishYear,
-        language: bookLanguage,
-        series,
-        seriesNumber,
-        format,
-        description,
-        personalNotes,
-        rating,
-        coverUrl,
-        startDate,
-        addedDate: new Date().toISOString().split('T')[0]
-    };
+    try {
+        const bookData = {
+            title,
+            author,
+            totalPages,
+            pagesRead: 0,
+            genre,
+            status,
+            isbn,
+            publisher,
+            publishYear,
+            language: bookLanguage,
+            series,
+            seriesNumber,
+            format,
+            description,
+            personalNotes,
+            rating,
+            coverUrl,
+            startDate
+        };
 
-    books.push(book);
-    saveBooks();
-    updateBookList();
-    updateBookSelects();
-    updateLibraryStats();
+        const newBook = await DatabaseService.addBook(bookData);
 
-    // Clear form
-    document.getElementById('newBookTitle').value = '';
-    document.getElementById('newBookAuthor').value = '';
-    document.getElementById('newBookPages').value = '';
-    document.getElementById('newBookISBN').value = '';
-    document.getElementById('newBookPublisher').value = '';
-    document.getElementById('newBookYear').value = '';
-    document.getElementById('newBookSeries').value = '';
-    document.getElementById('newBookSeriesNum').value = '';
-    document.getElementById('newBookDescription').value = '';
-    document.getElementById('newBookNotes').value = '';
-    document.getElementById('newBookCover').value = '';
-    document.getElementById('newBookStartDate').value = '';
-    document.getElementById('newBookRating').value = '0';
-    updateStarDisplay(0);
+        books.push({
+            id: newBook.id,
+            ...bookData,
+            addedDate: newBook.created_at?.split('T')[0]
+        });
 
-    showToast(t('bookAdded', { title }), 'success');
+        updateBookList();
+        updateBookSelects();
+        updateLibraryStats();
+
+        document.getElementById('newBookTitle').value = '';
+        document.getElementById('newBookAuthor').value = '';
+        document.getElementById('newBookPages').value = '';
+        document.getElementById('newBookISBN').value = '';
+        document.getElementById('newBookPublisher').value = '';
+        document.getElementById('newBookYear').value = '';
+        document.getElementById('newBookSeries').value = '';
+        document.getElementById('newBookSeriesNum').value = '';
+        document.getElementById('newBookDescription').value = '';
+        document.getElementById('newBookNotes').value = '';
+        document.getElementById('newBookCover').value = '';
+        document.getElementById('newBookStartDate').value = '';
+        document.getElementById('newBookRating').value = '0';
+        updateStarDisplay(0);
+
+        showToast(t('bookAdded', { title }), 'success');
+    } catch (error) {
+        console.error('Error adding book:', error);
+        showToast('Error adding book', 'error');
+    }
 }
 
 function updateBookList(filter = 'all') {
@@ -766,35 +810,48 @@ function filterBooks(filter) {
     updateBookList(filter);
 }
 
-function changeBookStatus(bookId) {
+async function changeBookStatus(bookId) {
     const book = books.find(b => b.id === bookId);
     if (!book) return;
-    
+
     const statuses = ['to-read', 'reading', 'completed'];
     const currentIndex = statuses.indexOf(book.status);
     book.status = statuses[(currentIndex + 1) % statuses.length];
-    
+
+    const updates = { status: book.status };
+
     if (book.status === 'completed') {
         book.completedDate = new Date().toISOString().split('T')[0];
-        book.endDate = book.completedDate;
+        updates.completedDate = book.completedDate;
     } else if (book.status === 'reading' && !book.startDate) {
         book.startDate = new Date().toISOString().split('T')[0];
+        updates.startDate = book.startDate;
     }
-    
-    saveBooks();
-    updateBookList();
-    updateBookSelects();
-    updateLibraryStats();
-    checkNewAchievements();
-}
 
-function deleteBook(bookId) {
-    if (confirm(t('deleteBook'))) {
-        books = books.filter(b => b.id !== bookId);
-        saveBooks();
+    try {
+        await DatabaseService.updateBook(bookId, updates);
         updateBookList();
         updateBookSelects();
         updateLibraryStats();
+        checkNewAchievements();
+    } catch (error) {
+        console.error('Error updating book status:', error);
+        showToast('Error updating book', 'error');
+    }
+}
+
+async function deleteBook(bookId) {
+    if (confirm(t('deleteBook'))) {
+        try {
+            await DatabaseService.deleteBook(bookId);
+            books = books.filter(b => b.id !== bookId);
+            updateBookList();
+            updateBookSelects();
+            updateLibraryStats();
+        } catch (error) {
+            console.error('Error deleting book:', error);
+            showToast('Error deleting book', 'error');
+        }
     }
 }
 
@@ -940,7 +997,7 @@ function updateTimerDisplay() {
         `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
-function logTimerSession() {
+async function logTimerSession() {
     const pages = parseInt(document.getElementById('timerPages').value);
     const bookId = document.getElementById('timerBook').value;
     const minutes = Math.floor(timerSeconds / 60);
@@ -951,39 +1008,59 @@ function logTimerSession() {
     }
 
     const today = new Date().toISOString().split('T')[0];
-    if (!readingData[today]) {
-        readingData[today] = { pages: 0, minutes: 0, sessions: [] };
-    }
 
-    readingData[today].pages += pages;
-    readingData[today].minutes = (readingData[today].minutes || 0) + minutes;
-    readingData[today].sessions.push({
-        pages,
-        minutes,
-        bookId,
-        timestamp: new Date().toISOString()
-    });
+    try {
+        await DatabaseService.logReadingSession({
+            date: today,
+            pages,
+            minutes,
+            bookId,
+            notes: null
+        });
 
-    if (bookId) {
-        const book = books.find(b => b.id === bookId);
-        if (book) {
-            book.pagesRead = (book.pagesRead || 0) + pages;
-            if (book.pagesRead >= book.totalPages) {
-                book.status = 'completed';
-                book.completedDate = today;
-                book.endDate = today;
-                showToast(t('congratsFinished', { title: book.title }), 'success');
-            }
-            saveBooks();
+        if (!readingData[today]) {
+            readingData[today] = { pages: 0, minutes: 0, sessions: [] };
         }
-    }
 
-    saveData();
-    updateAll();
-    resetTimer();
-    document.getElementById('timerPages').value = '';
-    showToast(t('loggedPagesMinutes', { pages, minutes }), 'success');
-    checkNewAchievements();
+        readingData[today].pages += pages;
+        readingData[today].minutes = (readingData[today].minutes || 0) + minutes;
+        readingData[today].sessions.push({
+            pages,
+            minutes,
+            bookId,
+            timestamp: new Date().toISOString()
+        });
+
+        if (bookId) {
+            const book = books.find(b => b.id === bookId);
+            if (book) {
+                book.pagesRead = (book.pagesRead || 0) + pages;
+                if (book.pagesRead >= book.totalPages) {
+                    book.status = 'completed';
+                    book.completedDate = today;
+                    await DatabaseService.updateBook(bookId, {
+                        pagesRead: book.pagesRead,
+                        status: 'completed',
+                        completedDate: today
+                    });
+                    showToast(t('congratsFinished', { title: book.title }), 'success');
+                } else {
+                    await DatabaseService.updateBook(bookId, {
+                        pagesRead: book.pagesRead
+                    });
+                }
+            }
+        }
+
+        updateAll();
+        resetTimer();
+        document.getElementById('timerPages').value = '';
+        showToast(t('loggedPagesMinutes', { pages, minutes }), 'success');
+        checkNewAchievements();
+    } catch (error) {
+        console.error('Error logging timer session:', error);
+        showToast('Error logging session', 'error');
+    }
 }
 
 function updateTodaySessions() {
@@ -1041,15 +1118,20 @@ function updateAchievements() {
     document.getElementById('achievementProgressBar').style.width = `${(unlocked / achievements.length) * 100}%`;
 }
 
-function checkNewAchievements() {
+async function checkNewAchievements() {
     const achievements = getAchievements();
-    achievements.forEach(a => {
+    for (const a of achievements) {
         const wasUnlocked = localStorage.getItem(`achievement_${a.id}`);
         if (!wasUnlocked && a.check()) {
             localStorage.setItem(`achievement_${a.id}`, 'true');
+            try {
+                await DatabaseService.saveAchievement(a.id, true);
+            } catch (error) {
+                console.error('Error saving achievement:', error);
+            }
             showToast(t('achievementUnlocked', { name: a.name }), 'success');
         }
-    });
+    }
 }
 
 function checkLongSession() {

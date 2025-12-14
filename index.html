@@ -7,6 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body class="min-h-screen transition-colors duration-300">
@@ -31,6 +32,9 @@
                 </button>
                 <button onclick="showExportImportModal()" class="p-3 rounded-full bg-white dark:bg-gray-700 shadow-lg hover:scale-110 transition-all">
                     <i class="fas fa-cloud text-blue-500"></i>
+                </button>
+                <button id="userMenuBtn" onclick="handleSignOut()" class="p-3 rounded-full bg-white dark:bg-gray-700 shadow-lg hover:scale-110 transition-all hidden">
+                    <i class="fas fa-user text-gray-600 dark:text-gray-300"></i>
                 </button>
             </div>
         </header>
@@ -848,6 +852,41 @@
         </div>
     </div>
 
+    <!-- Auth Modal -->
+    <div id="authModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 modal">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 m-4 max-w-md w-full">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+                    <i class="fas fa-book-open text-white text-2xl"></i>
+                </div>
+                <h2 id="authTitle" class="text-2xl font-bold text-gray-800 dark:text-white mb-2">Sign In</h2>
+                <p class="text-gray-500 dark:text-gray-400">Track your reading journey</p>
+            </div>
+
+            <form onsubmit="handleAuth(event)" class="space-y-4">
+                <div id="authError" class="hidden bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 p-3 rounded-lg text-sm"></div>
+
+                <div>
+                    <label class="block text-gray-600 dark:text-gray-300 text-sm mb-2">Email</label>
+                    <input type="email" id="authEmail" required class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 focus:ring-2 focus:ring-amber-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
+                </div>
+
+                <div>
+                    <label class="block text-gray-600 dark:text-gray-300 text-sm mb-2">Password</label>
+                    <input type="password" id="authPassword" required minlength="6" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 focus:ring-2 focus:ring-amber-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
+                </div>
+
+                <button type="submit" id="authSubmitBtn" class="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold py-3 rounded-lg hover:from-amber-600 hover:to-orange-600 transition-all transform hover:scale-105 shadow-lg">
+                    Sign In
+                </button>
+
+                <p id="authToggleText" class="text-center text-sm text-gray-500 dark:text-gray-400 mt-4">
+                    Don't have an account? <button type="button" onclick="toggleAuthMode()" class="text-amber-500 hover:text-amber-600 font-semibold">Sign Up</button>
+                </p>
+            </form>
+        </div>
+    </div>
+
     <!-- Export/Import Modal -->
     <div id="exportImportModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 modal">
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 m-4 max-w-md w-full">
@@ -873,7 +912,12 @@
     </div>
 
     <!-- Scripts -->
+    <script src="js/env.js"></script>
+    <script src="js/config.js"></script>
     <script src="js/translations.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/auth-ui.js"></script>
+    <script src="js/database.js"></script>
     <script src="js/app.js"></script>
     <script src="js/retrospective.js"></script>
 </body>
